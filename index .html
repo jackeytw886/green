@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>品綠食 呷飯桌 — 五桌聲音互動體驗</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;700;900&display=swap');
+:root{--bg:#0b0d0e; --glass:rgba(255, 255, 255, 0.05); --border:rgba(255,255,255,0.1);}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:#ccc;font-family:'Noto Sans TC',sans-serif;min-height:100vh;overflow-x:hidden;user-select:none; display:flex; flex-direction:column;}
+
+#gBg{position:fixed;inset:0;z-index:0;transition:background 1s ease-in-out}
+
+/* ═══ Header (您標示的上方區塊) ═══ */
+/* 增加了文字陰影與呼吸效果，模擬燈光設計的感覺 */
+.hdr{position:relative;z-index:2;text-align:center;padding:2.5rem 1rem 1rem; transition: all 0.5s;}
+.hdr h1{
+  font-family:'Noto Serif TC';
+  font-size:clamp(2.2rem, 7vw, 3.8rem);
+  font-weight:900;
+  letter-spacing:.08em;
+  color:#f0e6d2;
+  text-shadow: 0 0 20px rgba(90, 138, 60, 0.3); /* 柔和光暈 */
+  margin-bottom: 0.5rem;
+}
+.hdr h1 em{
+  font-style:normal;
+  background:linear-gradient(135deg,#6bc448,#a8e078);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  filter: drop-shadow(0 0 5px rgba(107, 196, 72, 0.5)); /* 綠色光暈 */
+}
+.hdr .sub{
+  font-size:clamp(0.9rem, 2vw, 1.1rem);
+  color:#888;
+  font-family:'Noto Serif TC';
+  letter-spacing: 0.15em;
+  opacity: 0.8;
+}
+
+/* ═══ Tabs ═══ */
+.tabs{display:flex;justify-content:center;gap:.6rem;padding:.5rem .8rem 1.2rem;flex-wrap:wrap;position:relative;z-index:2}
+.tab{
+  background:var(--glass);
+  backdrop-filter: blur(5px);
+  border:1px solid var(--border);
+  border-radius:50px; /* 變更為圓角膠囊狀 */
+  padding:.6rem 1.4rem;
+  font-size:1rem;
+  font-weight:500;
+  color:#666;
+  cursor:pointer;
+  transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family:'Noto Sans TC';
+  letter-spacing: 0.05em;
+}
+.tab:hover{color:#aaa; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2);}
+.tab.on{color:#fff; transform:translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3);}
+/* 各個Tab的啟動顏色由JS控制，這裡保留基礎樣式 */
+
+/* ═══ Stage (主要互動區) ═══ */
+.stage-wrap{width:100%; max-width:850px; margin:0 auto; padding:0 1rem; position:relative; z-index:2; flex-grow: 1;}
+.stage{
+  position:relative;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:32px;
+  overflow:hidden;
+  /* 毛玻璃效果 */
+  background:rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(12px); 
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+  min-height:500px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  transition: border-color 0.5s;
+}
+#cvs{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;border-radius:32px}
+
+/* Center slogan */
+.center-zone{position:relative;z-index:2;text-align:center;padding:1.5rem;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.table-label{font-family:'Noto Serif TC';font-size:0.9rem;font-weight:700;letter-spacing:.2em;opacity:.6;margin-bottom:.8rem; text-transform: uppercase;}
+.slogan-box{min-height:110px;display:flex;align-items:center;justify-content:center}
+.slogan-text{
+  font-family:'Noto Serif TC';
+  font-size:clamp(1.5rem,5vw,2.6rem);
+  font-weight:900;
+  line-height:1.5;
+  text-align:center;
+  max-width:650px;
+  opacity:0;
+  transform:scale(.9) translateY(15px);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+.slogan-text.pop{animation:sloganPop .7s cubic-bezier(.175,.885,.32,1.275) forwards}
+@keyframes sloganPop{0%{opacity:0;transform:scale(.9) translateY(20px);filter:blur(10px)}100%{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}}
+
+/* Policy line */
+.policy-line{
+  font-size:0.95rem;
+  font-weight:500;
+  margin-top:1rem;
+  padding:.4rem 1.2rem;
+  border-radius:50px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(0,0,0,.3);
+  opacity:0;
+  transition:all .5s .2s;
+  letter-spacing: 0.05em;
+}
+.policy-line.show{opacity:.8; transform: translateY(0);}
+
+/* Pads */
+.pads{display:flex;justify-content:center;gap:clamp(.8rem, 3vw, 1.5rem);padding:1rem .5rem 2rem;position:relative;z-index:2; width: 100%;}
+.pad{display:flex;flex-direction:column;align-items:center;gap:.6rem;cursor:pointer;transition:transform .2s;-webkit-tap-highlight-color:transparent}
+.pad:active{transform:scale(.92)}
+.pad-icon{
+  width:clamp(60px,16vw,100px);
+  height:clamp(60px,16vw,100px);
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.08);
+  background:linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:clamp(1.8rem,5vw,2.8rem);
+  position:relative;
+  transition:all .3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: inset 0 2px 5px rgba(255,255,255,0.05), 0 5px 15px rgba(0,0,0,0.2);
+}
+.pad-icon::before{content:'';position:absolute;inset:3px;border-radius:50%;border:1px dashed rgba(255,255,255,.1);transition:all .3s}
+.pad-name{font-size:clamp(.75rem,2vw,.9rem);font-weight:500;color:#666;transition:color .3s;font-family:'Noto Sans TC'; letter-spacing: 0.05em;}
+
+/* 點擊效果 */
+.pad.hit .pad-icon{
+  transform:scale(1.15) translateY(-5px);
+  border-color:currentColor;
+  box-shadow:0 0 20px currentColor, 0 10px 30px rgba(0,0,0,0.5); /* 發光效果 */
+  background:rgba(255,255,255,.1);
+}
+.pad.hit .pad-icon::before{border-color:currentColor;opacity:.6; animation: spin 4s linear infinite;}
+.pad.hit .pad-name{color:#ddd; font-weight: 700;}
+
+@keyframes spin { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+
+.ripple{position:absolute;inset:-10px;border-radius:50%;border:2px solid currentColor;opacity:0;transform:scale(.8);pointer-events:none;animation:ripOut .5s ease-out forwards}
+@keyframes ripOut{0%{opacity:.8;transform:scale(.9);border-width:2px}100%{opacity:0;transform:scale(1.8);border-width:0px}}
+
+/* ═══ Footer (您標示的下方區塊) ═══ */
+/* 增加了上邊框，調整文字間距，使其更清晰、更有設計感 */
+.foot{
+  text-align:center;
+  padding: 2rem 1.5rem;
+  margin-top: 2rem;
+  font-size: 0.75rem;
+  color: #666;
+  position: relative;
+  z-index: 2;
+  font-family: 'Noto Sans TC';
+  letter-spacing: 0.12em;
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.8));
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.foot span {
+    display: inline-block;
+    margin: 0 0.5rem;
+    opacity: 0.5;
+}
+</style>
+</head>
+<body>
+
+<div id="gBg"></div>
+
+<div class="hdr">
+  <!-- 加強標題的語意結構 -->
+  <h1><em>品綠食</em> 呷飯桌</h1>
+  <div class="sub">五桌聲音互動體驗 ─ 南投縣綠食飯桌推廣</div>
+</div>
+
+<nav class="tabs" id="tabs"></nav>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+    <canvas id="cvs"></canvas>
+    <div class="center-zone">
+      <div class="table-label" id="tableLabel"></div>
+      <div class="slogan-box"><div class="slogan-text" id="sloganText"></div></div>
+      <div class="policy-line" id="policyLine"></div>
+    </div>
+    <div class="pads" id="pads"></div>
+  </div>
+</div>
+
+<!-- 優化頁尾排版 -->
+<div class="foot">
+    品綠食 呷飯桌 <span>|</span> 南投縣政府環境保護局 <span>|</span> 綠食飯桌 Green Food <span>|</span> 淨零綠生活
+</div>
+
+<script>
+const TB=[
+  { id:'A', name:'🌿 在地食材',
+    color:'#7bc05d', color2:'#a5d98e', // 稍微調亮顏色以適應深色背景
+    bg:'radial-gradient(circle at 50% 30%, #1a2615 0%, #0b0d0e 70%)',
+    sounds:['山林','蟲鳴','風聲','溪水','鳥叫'],
+    icons:['🌲','🦗','💨','💧','🐦'],
+    files:['A01','A02','A03','A04','A05'],
+    policy:'選擇在地、友善及低碳的食材',
+    label:'GREEN TABLE A ─ 在地食材源頭聲',
+    slogans:[
+      '從土地到餐桌\n每一口都有山的味道',
+      '聽見南投的蟲鳴田野\n就是食材最好的產地證明',
+      '吃在地、食當季\n讓好山好水養好味',
+      '清淨溪水灌溉的土地\n孕育最安心的食材',
+      '鳥語花香的產地\n才有最新鮮的蔬果',
+    ],
+  },
+  { id:'B', name:'🥄 湯匙敲碗',
+    color:'#d4aa7d', color2:'#f0d6b6',
+    bg:'radial-gradient(circle at 50% 30%, #2e2418 0%, #0b0d0e 70%)',
+    sounds:['輕敲','雙敲','連敲','木匙','筷子'],
+    icons:['🥄','🥢','🍚','🪵','🥢'],
+    files:['B01','B02','B03','B04','B05'],
+    policy:'份量客製、惜食點餐',
+    label:'GREEN TABLE B ─ 湯匙敲碗聲',
+    slogans:[
+      '叮 ——\n慢慢吃，才吃得到滋味',
+      '吃慢、吃剛好\n才是真的惜食',
+      '每一口細嚼\n都是對食物的尊重',
+      '不急，好好吃一頓飯\n就是最好的生活態度',
+      '份量剛好，不浪費\n就是最美的餐桌風景',
+    ],
+  },
+  { id:'C', name:'📢 呷飯囉～',
+    color:'#f08e5e', color2:'#ffbf9e',
+    bg:'radial-gradient(circle at 50% 30%, #2e1a12 0%, #0b0d0e 70%)',
+    sounds:['呷飯囉','慢慢吃','笑聲','碗筷聲','眾人聲'],
+    icons:['📣','🤲','😄','🍜','👨‍👩‍👧‍👦'],
+    files:['C01','C02','C03','C04','C05'],
+    policy:'綠色飲食 × 共食文化',
+    label:'GREEN TABLE C ─ 呷飯囉～',
+    slogans:[
+      '呷飯囉～\n阿嬤的聲音是最暖的開飯號角',
+      '慢慢吃喔 ——\n台語裡最溫柔的餐桌祝福',
+      '笑聲\n是每頓飯最好的配菜',
+      '碗筷聲響起\n就知道有人為你準備了一頓飯',
+      '一起吃飯\n是最簡單也最珍貴的日常',
+    ],
+  },
+  { id:'D', name:'🥬 食材處理',
+    color:'#78c093', color2:'#aee0c0',
+    bg:'radial-gradient(circle at 50% 30%, #152920 0%, #0b0d0e 70%)',
+    sounds:['洗菜','切菜','倒米','落籃','市場'],
+    icons:['🚿','🔪','🌾','🍎','🏪'],
+    files:['D01','D02','D03','D04','D05'],
+    policy:'至少三項國產食材',
+    label:'GREEN TABLE D ─ 在地食材處理聲',
+    slogans:[
+      '洗菜的嘩嘩水聲\n是一道菜最初的旋律',
+      '切菜聲裡聽得到用心\n食物不是憑空出現的',
+      '稻米傾瀉的沙沙聲\n是大地最實在的禮物',
+      '食物有來處\n每一口都是農人的汗水',
+      '菜市場的喧嘩聲\n是在地經濟最生動的證明',
+    ],
+  },
+  { id:'E', name:'♻️ 無塑飯桌',
+    color:'#9ab3c9', color2:'#cce0f0',
+    bg:'radial-gradient(circle at 50% 30%, #1a222b 0%, #0b0d0e 70%)',
+    sounds:['布巾','陶瓷','木桌','玻璃','靜默'],
+    icons:['🧣','🍶','🪵','🥃','🤫'],
+    files:['E01','E02','E03','E04','E05'],
+    policy:'不提供一次性免洗餐具與塑膠桌巾',
+    label:'GREEN TABLE E ─ 無塑飯桌聲',
+    slogans:[
+      '布餐巾鋪桌的聲音\n是一種溫柔的選擇',
+      '陶瓷碰觸的聲音\n比塑膠更有溫度',
+      '木桌上的每個痕跡\n都是歲月的餐桌記憶',
+      '玻璃杯映著光\n裝的不只是水，是對地球的心意',
+      '少了塑膠袋的聲音\n世界安靜了一點',
+    ],
+  }
+];
+
+// ═══════════════════════════════════════════
+// AUDIO: Enhanced Logic for Interactivity
+// ═══════════════════════════════════════════
+
+let ax = null;
+
+function initAudio() {
+  if (!ax) {
+    ax = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (ax.state === 'suspended') {
+    ax.resume();
+  }
+}
+
+function playSound(fileKey) {
+  initAudio();
+  // Try to play MP3 first, fallback to Synth if fails
+  const exts = ['mp3', 'wav'];
+  let played = false;
+
+  function tryPlay(i) {
+    if (i >= exts.length) { 
+      // Fallback: If no file found, play Synth
+      playSynth(fileKey); 
+      return; 
+    }
+    const audio = new Audio(`sounds/${fileKey}.${exts[i]}`);
+    audio.volume = 1.0;
+    
+    // Safety for mobile autoplay policies
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        // Playing success
+      }).catch(error => {
+        console.log('Autoplay prevented or file missing, trying next format or synth.');
+        tryPlay(i + 1);
+      });
+    }
+    audio.onerror = () => tryPlay(i + 1);
+  }
+  tryPlay(0);
+}
+
+// Simple synthesizer for fallback (when no mp3 files exist)
+function playSynth(key) {
+  if(!ax) return;
+  const t = ax.currentTime;
+  const tb = key[0], idx = parseInt(key.substring(1)) - 1;
+  const nz = d => { const b=ax.createBuffer(1,ax.sampleRate*d,ax.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;return b };
+
+  // Use a master gain for volume control
+  const master = ax.createGain();
+  master.gain.value = 0.6; // Slightly softer
+  master.connect(ax.destination);
+
+  if (tb==='A') {
+    // Nature / Ambient
+    if(idx===1){
+        const o=ax.createOscillator(),am=ax.createOscillator(),ag=ax.createGain(),mg=ax.createGain();
+        o.type='triangle';o.frequency.value=4800; // Crickets
+        am.frequency.value=25;ag.gain.value=1000;
+        am.connect(ag);ag.connect(o.frequency); // FM Synthesis
+        mg.gain.setValueAtTime(0,t);mg.gain.linearRampToValueAtTime(.05,t+.1);mg.gain.exponentialRampToValueAtTime(.001,t+.8);
+        o.connect(mg);mg.connect(master);o.start(t);am.start(t);o.stop(t+.8);am.stop(t+.8);
+    } else {
+       // Water/Wind noise
+       const fs=[300,0,350,800,0],ds=[2.0,0,1.5,1.2,0],dur=ds[idx]||1;
+       const b=nz(dur),n=ax.createBufferSource();n.buffer=b;
+       const f=ax.createBiquadFilter();f.type='bandpass';f.frequency.value=fs[idx]||400;f.Q.value=1;
+       const g=ax.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.2,t+.3);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+       n.connect(f);f.connect(g);g.connect(master);n.start(t);n.stop(t+dur);
+    }
+  } else if (tb==='B') {
+    // Percussive / Tapping
+    const fs=[420,450,400,320,1200];
+    const o=ax.createOscillator(),g=ax.createGain();
+    o.type='sine';o.frequency.value=fs[idx];
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.3,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+.3);
+    o.connect(g);g.connect(master);o.start(t);o.stop(t+.3);
+  } else {
+    // General Tones
+    const o=ax.createOscillator(),g=ax.createGain();
+    o.type='sine';
+    o.frequency.setValueAtTime(200 + (idx*100), t);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.2,t+.05);g.gain.exponentialRampToValueAtTime(.001,t+.6);
+    o.connect(g);g.connect(master);o.start(t);o.stop(t+.6);
+  }
+}
+
+// ═══════════════════════════════════════════
+// CANVAS PARTICLES
+// ═══════════════════════════════════════════
+const cvs=document.getElementById('cvs'),cx=cvs.getContext('2d');
+let pts=[],cT=0;
+const NC=[['#8abe5e','#5a8a3c','#a0d070'],['#e8c9a0','#c49a6c','#d4b088'],['#f5a66e','#e07c4a','#f0c090'],['#a0d4b2','#6aaa82','#80c49a'],['#c0d0e0','#8ca0b4','#a0b8cc']];
+
+function rCvs(){
+    const r=cvs.parentElement.getBoundingClientRect();
+    cvs.width=r.width*2;
+    cvs.height=r.height*2;
+    // Scale for Retina/HiDPI
+    cx.scale(2,2); 
+}
+rCvs();window.addEventListener('resize',rCvs);
+
+function burst(pi){
+  const col=NC[cT];
+  // Calculate position relative to canvas (2x scaled down logic for 1x drawing)
+  const px = (cvs.width/2) * ((pi+1)/6) * (cvs.width < 1000 ? 1.5 : 1); // rough X adjustment
+  const py = (cvs.height/2) * 0.7; 
+  
+  for(let i=0;i<20;i++){
+    const a=Math.random()*Math.PI*2;
+    const sp=2+Math.random()*5;
+    pts.push({
+        x: (cvs.width/2) * ((pi+1)/6) + (pi*10), // Approximate center of icon
+        y: (cvs.height/2) * 0.75,
+        vx:Math.cos(a)*sp,
+        vy:Math.sin(a)*sp-3,
+        life:1,
+        col:col[Math.floor(Math.random()*col.length)],
+        size:2+Math.random()*6,
+        type:cT
+    });
+  }
+}
+
+function drawPts(){
+    // Use half width/height for clearRect because of scale(2,2)? No, clearRect uses logic coords
+    cx.clearRect(0,0,cvs.width/2,cvs.height/2);
+    
+    pts=pts.filter(p=>{
+        p.x+=p.vx;
+        p.y+=p.vy;
+        p.vy+=0.15; // Gravity
+        p.life-=0.015;
+        if(p.life<=0)return false;
+        
+        cx.globalAlpha=p.life;
+        cx.fillStyle=p.col;
+        
+        cx.beginPath();
+        cx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        cx.fill();
+        
+        return true;
+    });
+    cx.globalAlpha=1;
+    requestAnimationFrame(drawPts);
+}
+drawPts();
+
+// ═══════════════════════════════════════════
+// SLOGAN & UI
+// ═══════════════════════════════════════════
+function popSlogan(ti,si){
+    const tb=TB[ti];
+    const el=document.getElementById('sloganText');
+    el.classList.remove('pop');
+    el.style.color=tb.color2;
+    el.innerHTML=tb.slogans[si].replace(/\n/g,'<br>');
+    void el.offsetWidth;
+    el.classList.add('pop');
+}
+
+// ═══════════════════════════════════════════
+// BUILDER
+// ═══════════════════════════════════════════
+function buildPads(ti){
+  const wrap=document.getElementById('pads');wrap.innerHTML='';
+  const tb=TB[ti];
+  for(let i=0;i<5;i++){
+    const pad=document.createElement('div');pad.className='pad';
+    pad.innerHTML=`<div class="pad-icon" style="color:${tb.color2}">${tb.icons[i]}</div><div class="pad-name">${tb.sounds[i]}</div>`;
+    pad.onclick=()=>{
+      initAudio();
+      playSound(tb.files[i]);
+      
+      const icon=pad.querySelector('.pad-icon');
+      const rip=document.createElement('div');rip.className='ripple';rip.style.color=tb.color2;
+      icon.appendChild(rip);setTimeout(()=>rip.remove(),600);
+      
+      pad.classList.remove('hit');void pad.offsetWidth;
+      pad.style.color=tb.color2;pad.classList.add('hit');
+      
+      // Fix burst position logic slightly by passing index
+      // But canvas logic is detached from DOM position. 
+      // For now, visual burst is just an effect.
+      burst(i); 
+      popSlogan(ti,i);
+      
+      setTimeout(()=>pad.classList.remove('hit'),500);
+    };
+    wrap.appendChild(pad);
+  }
+}
+
+function switchT(ti){
+  cT=ti;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',+t.dataset.t===ti));
+  const tb=TB[ti];
+  
+  // Update Tab Colors Active State
+  const activeTab = document.querySelector(`.tab[data-t="${ti}"]`);
+  if(activeTab) {
+      activeTab.style.borderColor = tb.color2;
+      activeTab.style.background = tb.color + '33'; // 20% opacity hex
+      activeTab.style.color = '#fff';
+  }
+  // Reset other tabs
+  document.querySelectorAll('.tab:not(.on)').forEach(t => {
+      t.style.borderColor = 'rgba(255,255,255,0.1)';
+      t.style.background = 'rgba(255,255,255,0.05)';
+      t.style.color = '#666';
+  });
+
+  buildPads(ti);
+  document.getElementById('gBg').style.background=tb.bg;
+  document.getElementById('stage').style.borderColor=tb.color+'40';
+  document.getElementById('tableLabel').textContent=tb.label;
+  document.getElementById('tableLabel').style.color=tb.color;
+  
+  const el=document.getElementById('sloganText');
+  el.classList.remove('pop');el.style.color=tb.color2;
+  el.innerHTML=tb.slogans[0].replace(/\n/g,'<br>');
+  void el.offsetWidth;el.classList.add('pop');
+  
+  const pl=document.getElementById('policyLine');
+  pl.innerHTML='<span style="opacity:0.6">📋 綠食宣言｜</span> ' + tb.policy;
+  pl.style.color=tb.color2;
+  pl.style.borderColor=tb.color+'40';
+  pl.style.boxShadow = `0 0 15px ${tb.color}20`; // subtle glow
+  pl.classList.remove('show');void pl.offsetWidth;pl.classList.add('show');
+}
+
+document.getElementById('tabs').innerHTML='';
+TB.forEach((tb,i)=>{
+    const t=document.createElement('div');
+    t.className='tab';
+    t.dataset.t=i;
+    t.textContent=tb.name;
+    t.onclick=()=>switchT(i);
+    document.getElementById('tabs').appendChild(t)
+});
+
+switchT(0);
+document.addEventListener('keydown',e=>{const n='12345'.indexOf(e.key);if(n>=0)switchT(n)});
+// Initial Interaction to unlock audio
+document.body.addEventListener('click', initAudio, {once:true});
+</script>
+</body>
+</html>
